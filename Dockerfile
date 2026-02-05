@@ -8,7 +8,7 @@ LABEL name="rhdh-must-gather" \
       vendor="Red Hat" \
       version="$RHDH_MUST_GATHER_VERSION" \
       summary="Red Hat Developer Hub (RHDH) must-gather tool" \
-      description="Collects diagnostic information from RHDH deployments on Kubernetes and OpenShift clusters"
+      description="Collects diagnostic information from RHDH deployments on Kubernetes and OpenShift clusters. Supports both Helm and Operator-backed installations of RHDH."
 
 # Install basic tools and dependencies needed for must-gather operations
 # Note: UBI9-minimal already has curl-minimal and coreutils-single installed
