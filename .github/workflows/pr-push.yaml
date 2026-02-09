@@ -178,19 +178,37 @@ jobs:
         env:
           API_TOKEN: ${{ secrets.QUAY_OAUTH_TOKEN || secrets.QUAY_TOKEN }}
         run: |
-          # Use sanitized ENV vars to prevent shell injection
-          curl -s -X PUT \
-            -H "Authorization: Bearer ${API_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d "{\"expiration\": ${EXPIRATION_TIMESTAMP}}" \
-            "https://${{ vars.REGISTRY }}/api/v1/repository/${{ vars.REGISTRY_ORG }}/${{ env.IMAGE_NAME }}/tag/${SAFE_IMAGE_TAG}"
-
-          if [ -n "$SAFE_EXTRA_TAGS" ]; then
-             curl -s -X PUT \
+          set_tag_expiration() {
+            local tag="$1"
+            local url="https://${{ vars.REGISTRY }}/api/v1/repository/${{ vars.REGISTRY_ORG }}/${{ env.IMAGE_NAME }}/tag/${tag}"
+            
+            echo "Setting expiration for tag: ${tag}"
+            echo "Expiration timestamp: ${EXPIRATION_TIMESTAMP} ($(date -d @${EXPIRATION_TIMESTAMP} -u))"
+            
+            response=$(curl -s -w "\n%{http_code}" -X PUT \
               -H "Authorization: Bearer ${API_TOKEN}" \
               -H "Content-Type: application/json" \
               -d "{\"expiration\": ${EXPIRATION_TIMESTAMP}}" \
-              "https://${{ vars.REGISTRY }}/api/v1/repository/${{ vars.REGISTRY_ORG }}/${{ env.IMAGE_NAME }}/tag/${SAFE_EXTRA_TAGS}"
+              "${url}")
+            
+            http_code=$(echo "$response" | tail -n1)
+            body=$(echo "$response" | sed '$d')
+            
+            echo "HTTP Status: ${http_code}"
+            echo "Response: ${body}"
+            
+            if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+              echo "::warning::Failed to set expiration for tag ${tag} (HTTP ${http_code})"
+              return 1
+            fi
+          }
+
+          # Set expiration on main tag (continue on failure)
+          set_tag_expiration "${SAFE_IMAGE_TAG}" || true
+
+          # Set expiration on extra tag if present
+          if [ -n "$SAFE_EXTRA_TAGS" ]; then
+            set_tag_expiration "${SAFE_EXTRA_TAGS}" || true
           fi
 
       - name: Comment image links in PR
