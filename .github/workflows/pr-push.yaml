@@ -13,6 +13,7 @@ jobs:
   pr-push:
     name: Push PR Container Image
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     if: ${{ github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success' }}
     permissions:
       contents: read
