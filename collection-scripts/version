@@ -2,6 +2,7 @@
 
 set -euo pipefail
 
+# Some comment
 function version() {
   if [[ ! -z "${RHDH_MUST_GATHER_VERSION:-}" ]] ; then
     echo "${RHDH_MUST_GATHER_VERSION}"
