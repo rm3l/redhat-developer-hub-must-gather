@@ -201,7 +201,6 @@ jobs:
             response=$(curl -s -w "\n%{http_code}" -X PUT \
               -H "Authorization: Bearer ${API_TOKEN}" \
               -H "Content-Type: application/json" \
-              -H "X-Requested-With: XMLHttpRequest" \
               -d "{\"expiration\": ${EXPIRATION_TIMESTAMP}}" \
               "${url}")
             
@@ -259,7 +258,7 @@ jobs:
       - name: Summary
         if: steps.meta.outputs.skip != 'true'
         run: |
-          ALL_TAGS="${{ env.SAFE_IMAGE_TAG }}"
+          ALL_TAGS="\`${{ env.SAFE_IMAGE_TAG }}\`"
           
           # FIXED: Use env var to avoid syntax error if empty
           for tag in $SAFE_EXTRA_TAGS; do
@@ -270,4 +269,4 @@ jobs:
           echo "- **Version**: ${{ env.SAFE_VERSION }}" >> $GITHUB_STEP_SUMMARY
           echo "- **PR Number**: ${{ env.SAFE_PR_NUMBER }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Status**: Pushed and expiration set" >> $GITHUB_STEP_SUMMARY
-          echo "- **Tags**: \`${ALL_TAGS}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tags**: ${ALL_TAGS}" >> $GITHUB_STEP_SUMMARY
