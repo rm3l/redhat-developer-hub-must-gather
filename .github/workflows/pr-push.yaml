@@ -28,21 +28,55 @@ jobs:
         with:
           script: |
             const sha = context.payload.workflow_run.head_sha;
+            const branch = context.payload.workflow_run.head_branch;
+            const headRepoOwner = context.payload.workflow_run.head_repository?.owner?.login;
+            const isFork = headRepoOwner && headRepoOwner !== context.repo.owner;
 
+            console.log(`Commit SHA: ${sha}`);
+            console.log(`Branch: ${branch}`);
+            console.log(`Head repo owner: ${headRepoOwner}`);
+            console.log(`Is fork: ${isFork}`);
+
+            // Method 1: Try to get PR from workflow_run.pull_requests (works for non-fork PRs)
+            const workflowPRs = context.payload.workflow_run.pull_requests || [];
+            if (workflowPRs.length > 0) {
+              console.log(`Found PR #${workflowPRs[0].number} from workflow_run.pull_requests`);
+              core.setOutput("number", workflowPRs[0].number);
+              return;
+            }
+            console.log("No PRs in workflow_run.pull_requests, trying API lookup...");
+
+            // Method 2: Try listPullRequestsAssociatedWithCommit
             const { data: pulls } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
               owner: context.repo.owner,
               repo: context.repo.repo,
               commit_sha: sha,
             });
 
-            // Filter to open PRs where this commit is the head
-            const pr = pulls.find(p => p.state === "open" && p.head.sha === sha);
+            console.log(`Found ${pulls.length} PR(s) via listPullRequestsAssociatedWithCommit`);
+            pulls.forEach(p => console.log(`  - PR #${p.number}: state=${p.state}`));
+
+            let pr = pulls.find(p => p.state === "open");
+
+            // Method 3: If no results and this is a fork, try searching by branch
+            if (!pr && isFork) {
+              console.log(`Trying branch-based lookup for fork: ${headRepoOwner}:${branch}`);
+              const { data: branchPulls } = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: "open",
+                head: `${headRepoOwner}:${branch}`,
+              });
+              console.log(`Found ${branchPulls.length} PR(s) via branch lookup`);
+              pr = branchPulls[0];
+            }
 
             if (!pr) {
               core.setFailed(`No open PR found for commit ${sha}`);
               return;
             }
 
+            console.log(`Using PR #${pr.number}`);
             core.setOutput("number", pr.number);
 
       - name: Download artifact from build workflow
