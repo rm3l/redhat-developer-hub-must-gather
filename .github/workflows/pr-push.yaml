@@ -29,19 +29,21 @@ jobs:
           script: |
             const sha = context.payload.workflow_run.head_sha;
 
-            const { data: pulls } = await github.rest.pulls.list({
+            const { data: pulls } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              state: "open",
-              head: `${context.repo.owner}:${sha}`,
+              commit_sha: sha,
             });
 
-            if (pulls.length === 0) {
-              core.setFailed(`No PR found for commit ${sha}`);
+            // Filter to open PRs where this commit is the head
+            const pr = pulls.find(p => p.state === "open" && p.head.sha === sha);
+
+            if (!pr) {
+              core.setFailed(`No open PR found for commit ${sha}`);
               return;
             }
 
-            core.setOutput("number", pulls[0].number);
+            core.setOutput("number", pr.number);
 
       - name: Download artifact from build workflow
         uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4
