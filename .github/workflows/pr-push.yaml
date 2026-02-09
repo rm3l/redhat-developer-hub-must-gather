@@ -188,6 +188,7 @@ jobs:
             response=$(curl -s -w "\n%{http_code}" -X PUT \
               -H "Authorization: Bearer ${API_TOKEN}" \
               -H "Content-Type: application/json" \
+              -H "X-Requested-With: XMLHttpRequest" \
               -d "{\"expiration\": ${EXPIRATION_TIMESTAMP}}" \
               "${url}")
             
